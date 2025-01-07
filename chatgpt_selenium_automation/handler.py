@@ -73,10 +73,9 @@ class ChatGPTAutomation:
     def send_prompt_to_chatgpt(self, prompt):
         """ Sends a message to ChatGPT and waits for 20 seconds for the response """
 
-        input_box = self.driver.find_element(by=By.XPATH, value='//textarea[contains(@id, "prompt-textarea")]')
-        self.driver.execute_script(f"arguments[0].value = '{prompt}';", input_box)
-        input_box.send_keys(Keys.RETURN)
-        input_box.submit()
+        input_box = self.driver.find_element(by=By.XPATH, value='//div[contains(@id, "prompt-textarea")]/p')
+        self.driver.execute_script(f"arguments[0].innerText = '{prompt}';", input_box)
+        self.driver.find_element(by=By.XPATH, value='//*[@id="composer-background"]/div[2]/button').click()
         self.check_response_ended()
 
     def check_response_ended(self):
@@ -86,7 +85,7 @@ class ChatGPTAutomation:
                 by=By.CSS_SELECTOR, value='button.text-token-text-tertiary')) < 1:
             time.sleep(0.5)
             # Exit the while loop after 60 seconds anyway
-            if time.time() - start_time > 60:
+            if time.time() - start_time > 20:
                 break
         time.sleep(1)  # the length should be =4, so it's better to wait a moment to be sure it's really finished
 
