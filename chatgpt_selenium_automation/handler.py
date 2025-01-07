@@ -27,9 +27,9 @@ class ChatGPTAutomation:
         url = r"https://chat.openai.com"
         free_port = self.find_available_port()
         self.launch_chrome_with_remote_debugging(free_port, url)
-        self.wait_for_human_verification()
         self.driver = self.setup_webdriver(free_port)
         self.cookie = self.get_cookie()
+        self.wait_for_human_verification()
 
     @staticmethod
     def find_available_port():
@@ -75,26 +75,25 @@ class ChatGPTAutomation:
 
         input_box = self.driver.find_element(by=By.XPATH, value='//div[contains(@id, "prompt-textarea")]/p')
         self.driver.execute_script(f"arguments[0].innerText = '{prompt}';", input_box)
-        self.driver.find_element(by=By.XPATH, value='//*[@id="composer-background"]/div[2]/button').click()
+        self.driver.find_element(by=By.XPATH, value="//button[@aria-label='Send prompt']").click()
         self.check_response_ended()
 
     def check_response_ended(self):
         """ Checks if ChatGPT response ended """
+        time.sleep(1)
         start_time = time.time()
-        while len(self.driver.find_elements(by=By.CSS_SELECTOR, value='div.text-base')[-1].find_elements(
-                by=By.CSS_SELECTOR, value='button.text-token-text-tertiary')) < 1:
+        while len(self.driver.find_elements(by=By.XPATH, value="//button[@aria-label='Stop streaming']")) > 0:
             time.sleep(0.5)
-            # Exit the while loop after 60 seconds anyway
-            if time.time() - start_time > 20:
+            if time.time() - start_time > 30:
                 break
-        time.sleep(1)  # the length should be =4, so it's better to wait a moment to be sure it's really finished
+        time.sleep(1)
 
     def return_chatgpt_conversation(self):
         """
         :return: returns a list of items, even items are the submitted questions (prompts) and odd items are chatgpt response
         """
 
-        return self.driver.find_elements(by=By.CSS_SELECTOR, value='div.text-base')
+        return self.driver.find_elements(by=By.CSS_SELECTOR, value='div.text-base > div.text-base')[:-1]
 
     def save_conversation(self, file_name):
         """
@@ -122,11 +121,16 @@ class ChatGPTAutomation:
     def return_last_response(self):
         """ :return: the text of the last chatgpt response """
 
-        response_elements = self.driver.find_elements(by=By.CSS_SELECTOR, value='div.text-base')
-        return response_elements[-1].text
+        return self.driver.find_elements(by=By.CSS_SELECTOR, value='div.text-base > div.text-base')[-2].text
 
-    @staticmethod
-    def wait_for_human_verification():
+    def wait_for_human_verification(self):
+        time.sleep(2)
+        login = self.driver.find_elements(by=By.XPATH, value="//div[text()='Log in']")
+
+        if len(login) == 0:
+            # todo: check human verification
+            return
+
         print("You need to manually complete the log-in or the human verification if required.")
 
         while True:
