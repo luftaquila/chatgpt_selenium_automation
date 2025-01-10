@@ -11,10 +11,12 @@ def main():
         exit(1)
 
     filename = sys.argv[1]
+    diffopt = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else ""
+
     with open(filename, "r") as file:
         source_code = file.read()
 
-    cmd = f"git --no-pager diff {filename}"
+    cmd = f"git --no-pager diff {diffopt} {filename}"
     proc = subprocess.run(cmd, shell=True, text=True, capture_output=True, encoding="utf-8")
     diff = proc.stdout
 
@@ -40,7 +42,7 @@ def main():
 
     chatgpt.send_prompt_to_chatgpt(prompt)
     print(chatgpt.return_last_response())
-    chatgpt.quit()
+    # chatgpt.quit()
 
 if __name__ == "__main__":
     main()
