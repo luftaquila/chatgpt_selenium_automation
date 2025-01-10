@@ -7,4 +7,9 @@ setup(
     install_requires=[
         'selenium>=4.9.0',
     ],
+    entry_points={
+        'console_scripts': [
+            'review=chatgpt_selenium_automation.main:main',
+        ],
+    },
 )

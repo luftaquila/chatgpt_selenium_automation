@@ -1,16 +1,16 @@
 import os
-import socket
-import threading
 import time
+import socket
+import platform
+import threading
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 
 
 class ChatGPTAutomation:
 
-    def __init__(self, chrome_path, chrome_driver_path):
+    def __init__(self):
         """
         This constructor automates the following steps:
         1. Open a Chrome browser with remote debugging enabled at a specified URL.
@@ -21,13 +21,21 @@ class ChatGPTAutomation:
         :param chrome_driver_path: file path to chromedriver.exe (ex. C:\\Users\\User\\...\\chromedriver.exe)
         """
 
-        self.chrome_path = chrome_path
-        self.chrome_driver_path = chrome_driver_path
+        system = platform.system()
+
+        if system == "Windows":
+            self.chrome_path = r'"C:\Program Files\Google\Chrome\Application\chrome.exe"'
+            self.chrome_driver_path = rf"C:\Users\{os.getlogin()}\local\workspace\chromedriver.exe"
+        elif system == "Darwin":  # macOS
+            self.chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        else:
+            return None
 
         url = r"https://chat.openai.com"
         free_port = self.find_available_port()
         self.launch_chrome_with_remote_debugging(free_port, url)
         self.driver = self.setup_webdriver(free_port)
+        # self.driver.minimize_window()
         self.cookie = self.get_cookie()
         self.wait_for_human_verification()
 
@@ -46,7 +54,9 @@ class ChatGPTAutomation:
             provided url """
 
         def open_chrome():
-            chrome_cmd = f"{self.chrome_path} --remote-debugging-port={port} --user-data-dir=remote-profile {url}"
+            # headless = '' if len(sys.argv) > 1 and sys.argv[1] == '-h' else '--headless=new'
+            headless = ''
+            chrome_cmd = f"{self.chrome_path} --remote-debugging-port={port} --user-data-dir=remote-profile {headless} {url}"
             os.system(chrome_cmd)
 
         chrome_thread = threading.Thread(target=open_chrome)
@@ -57,6 +67,8 @@ class ChatGPTAutomation:
              with remote debugging enabled on the specified port"""
 
         chrome_options = webdriver.ChromeOptions()
+        user_agent = "'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'"
+        chrome_options.add_argument(f"user-agent={user_agent}")
         chrome_options.binary_location = self.chrome_driver_path
         chrome_options.add_experimental_option("debuggerAddress", f"127.0.0.1:{port}")
         driver = webdriver.Chrome(options=chrome_options)
@@ -74,7 +86,7 @@ class ChatGPTAutomation:
         """ Sends a message to ChatGPT and waits for 20 seconds for the response """
 
         input_box = self.driver.find_element(by=By.XPATH, value='//div[contains(@id, "prompt-textarea")]/p')
-        self.driver.execute_script(f"arguments[0].innerText = '{prompt}';", input_box)
+        self.driver.execute_script(f"arguments[0].innerText = `{prompt}`;", input_box)
         self.driver.find_element(by=By.XPATH, value="//button[@aria-label='Send prompt']").click()
         self.check_response_ended()
 
@@ -128,8 +140,8 @@ class ChatGPTAutomation:
         login = self.driver.find_elements(by=By.XPATH, value="//div[text()='Log in']")
 
         if len(login) == 0:
-            # todo: check human verification
-            return
+            if (self.driver.title != "Just a moment..."):
+                return
 
         print("You need to manually complete the log-in or the human verification if required.")
 
